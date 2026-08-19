@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site Hours — Team Timesheet</title>
+<style>
+  :root{
+    --ink:#12232E;
+    --blueprint:#1F5C7A;
+    --blueprint-light:#4FA3C7;
+    --paper:#F7F5EF;
+    --paper-line:#DCD6C6;
+    --amber:#D98A2B;
+    --slate:#5B6B72;
+    --card:#FFFFFF;
+    --ok:#3E7A55;
+    --font-display:'Space Grotesk', 'Archivo', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--font-body);
+    background:
+      linear-gradient(var(--paper-line) 1px, transparent 1px) 0 0/40px 40px,
+      linear-gradient(90deg, var(--paper-line) 1px, transparent 1px) 0 0/40px 40px,
+      var(--paper);
+    background-attachment:local;
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 60px;}
+
+  header.top{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:14px; margin-bottom:22px; flex-wrap:wrap; gap:10px;
+  }
+  .brand-eyebrow{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+    color:var(--blueprint); text-transform:uppercase; margin-bottom:4px;
+  }
+  h1{font-family:var(--font-display); font-size:28px; margin:0; letter-spacing:-.01em;}
+  .stamp{
+    font-family:var(--font-mono); font-size:11px; color:var(--slate);
+    border:1px solid var(--ink); padding:6px 10px; text-align:right; line-height:1.5;
+  }
+  .stamp b{color:var(--ink); font-weight:600;}
+
+  nav.tabs{display:flex; gap:2px; margin-bottom:22px; border-bottom:1px solid var(--paper-line);}
+  nav.tabs button{
+    font-family:var(--font-display); font-size:14px; font-weight:600;
+    background:none; border:none; padding:10px 16px; cursor:pointer;
+    color:var(--slate); border-bottom:3px solid transparent; transition:.15s;
+  }
+  nav.tabs button:hover{color:var(--ink);}
+  nav.tabs button.active{color:var(--ink); border-bottom-color:var(--amber);}
+
+  .panel{display:none;}
+  .panel.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  .card{
+    background:var(--card); border:1px solid var(--paper-line);
+    border-radius:6px; padding:20px; margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(18,35,46,.04);
+  }
+  .card h2{font-family:var(--font-display); font-size:16px; margin:0 0 14px; display:flex; align-items:center; gap:8px;}
+  .card h2 .tag{
+    font-family:var(--font-mono); font-size:10px; background:var(--blueprint); color:#fff;
+    padding:2px 6px; border-radius:3px; letter-spacing:.06em;
+  }
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  @media(max-width:680px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  label{display:block; font-size:12px; font-weight:600; color:var(--slate); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
+  select, input, textarea{
+    width:100%; font-family:var(--font-body); font-size:14px; padding:9px 10px;
+    border:1px solid var(--paper-line); border-radius:4px; background:#fff; color:var(--ink);
+  }
+  select:focus, input:focus, textarea:focus{outline:2px solid var(--blueprint-light); outline-offset:1px;}
+  .field{margin-bottom:14px;}
+
+  .btn{
+    font-family:var(--font-display); font-weight:600; font-size:13px;
+    background:var(--ink); color:#fff; border:none; padding:10px 18px;
+    border-radius:4px; cursor:pointer; transition:.15s;
+  }
+  .btn:hover{background:var(--blueprint);}
+  .btn.secondary{background:none; color:var(--ink); border:1px solid var(--ink);}
+  .btn.secondary:hover{background:var(--ink); color:#fff;}
+  .btn.danger{background:none; color:#B0453A; border:1px solid #B0453A; padding:5px 10px; font-size:12px;}
+  .btn.danger:hover{background:#B0453A; color:#fff;}
+  .btn.small{padding:5px 10px; font-size:12px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{
+    text-align:left; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.05em; color:var(--slate); padding:8px 8px; border-bottom:2px solid var(--ink);
+  }
+  td{padding:8px 8px; border-bottom:1px solid var(--paper-line); vertical-align:middle;}
+  tr.subtotal td{font-weight:700; background:#F1EEE3;}
+  tr.grandtotal td{font-weight:700; background:var(--ink); color:#fff;}
+  .hours{font-family:var(--font-mono); font-weight:600;}
+  .dept-badge{
+    font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:3px;
+    background:rgba(31,92,122,.1); color:var(--blueprint); white-space:nowrap;
+  }
+  .empty-state{padding:30px 10px; text-align:center; color:var(--slate); font-size:13px;}
+
+  .kpi{background:var(--card); border:1px solid var(--paper-line); border-radius:6px; padding:16px;}
+  .kpi .num{font-family:var(--font-mono); font-size:26px; font-weight:600; color:var(--ink);}
+  .kpi .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate); margin-top:2px;}
+
+  .chart-box{min-height:80px;}
+
+  /* ---- custom svg/css charts ---- */
+  .chart-flex{display:flex; align-items:center; gap:28px; flex-wrap:wrap; justify-content:center; padding:6px 0;}
+  .donut-wrap{position:relative; width:200px; height:200px; flex-shrink:0;}
+  .donut-wrap svg{transform:rotate(-90deg);}
+  .donut-wrap circle{transition:stroke-dasharray .5s ease;}
+  .donut-center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;}
+  .donut-center .num{font-family:var(--font-mono); font-size:22px; font-weight:600; color:var(--ink);}
+  .donut-center .lbl{font-size:9.5px; color:var(--slate); text-transform:uppercase; letter-spacing:.06em; margin-top:2px;}
+  .legend{display:flex; flex-direction:column; gap:9px; font-size:12.5px; min-width:160px;}
+  .legend-item{display:flex; align-items:center; gap:7px;}
+  .legend .dot{width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0;}
+  .legend .name{flex:1;}
+  .legend b{font-family:var(--font-mono);}
+  .legend .pct{color:var(--slate); font-family:var(--font-mono); font-size:11px; min-width:34px; text-align:right;}
+
+  .bar-row{display:grid; grid-template-columns:150px 1fr 52px; align-items:center; gap:10px; margin-bottom:11px; font-size:12.5px;}
+  .bar-row .bar-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .bar-track{background:#F1EEE3; border-radius:4px; height:14px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:4px; transition:width .5s ease;}
+  .bar-value{font-family:var(--font-mono); text-align:right; font-weight:600;}
+
+  .vbar-chart{display:flex; align-items:flex-end; gap:16px; height:220px; padding:20px 4px 0;}
+  .vbar-col{display:flex; flex-direction:column; align-items:center; flex:1; height:100%; justify-content:flex-end; min-width:0;}
+  .vbar-value{font-family:var(--font-mono); font-size:11px; margin-bottom:4px; font-weight:600;}
+  .vbar-track{width:100%; max-width:48px; background:#F1EEE3; border-radius:4px 4px 0 0; height:150px; display:flex; align-items:flex-end; overflow:hidden;}
+  .vbar-fill{width:100%; border-radius:4px 4px 0 0; transition:height .5s ease;}
+  .vbar-label{font-size:10.5px; color:var(--slate); margin-top:7px; text-align:center; max-width:76px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+  .toolbar .field{margin-bottom:0; min-width:160px;}
+  .row-actions{display:flex; gap:6px;}
+  .msg{font-size:12px; color:var(--ok); margin-top:8px;}
+  .list-item{
+    display:flex; align-items:center; justify-content:space-between; padding:8px 0;
+    border-bottom:1px solid var(--paper-line);
+  }
+  .list-item:last-child{border-bottom:none;}
+  .activity-chip{
+    display:inline-flex; align-items:center; gap:6px; background:#F1EEE3; border:1px solid var(--paper-line);
+    border-radius:14px; padding:4px 10px 4px 12px; font-size:12px; margin:3px 4px 3px 0;
+  }
+  .activity-chip button{background:none; border:none; color:var(--slate); cursor:pointer; font-size:14px; line-height:1; padding:0;}
+  footer.note{font-size:11px; color:var(--slate); text-align:center; margin-top:30px; font-family:var(--font-mono);}
+
+  /* ---- login gate ---- */
+  #loginScreen{
+    position:fixed; inset:0; background:var(--paper); z-index:100;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-card{
+    background:var(--card); border:1px solid var(--paper-line); border-radius:8px;
+    padding:32px 28px; max-width:380px; width:100%; box-shadow:0 4px 18px rgba(18,35,46,.08);
+  }
+  .login-card .brand-eyebrow{margin-bottom:2px;}
+  .login-card h1{margin-bottom:18px;}
+  .who-list{display:flex; flex-direction:column; gap:8px; margin-bottom:18px;}
+  .who-btn{
+    text-align:left; font-family:var(--font-body); font-size:14px; font-weight:600;
+    padding:11px 14px; border:1px solid var(--paper-line); border-radius:5px; background:#fff;
+    cursor:pointer; color:var(--ink); transition:.15s;
+  }
+  .who-btn:hover{border-color:var(--blueprint); background:rgba(31,92,122,.05);}
+  .who-btn.manager{border-color:var(--amber); color:#8A5A16;}
+  .who-btn.manager:hover{background:rgba(217,138,43,.08);}
+  .pin-row{display:none; gap:8px; margin-top:10px;}
+  .pin-row.show{display:flex;}
+  .userbar{
+    display:flex; align-items:center; gap:10px; font-family:var(--font-mono); font-size:11.5px; color:var(--slate);
+  }
+  .userbar .btn{padding:5px 10px; font-size:11px;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="brand-eyebrow">Technical Office &amp; Project Studies</div>
+    <h1>Site Hours</h1>
+    <label style="margin-bottom:10px;">Who's logging in?</label>
+    <div class="who-list" id="whoList"></div>
+    <div class="pin-row" id="pinRow">
+      <input type="password" id="pinInput" placeholder="Manager access code" style="flex:1;">
+      <button class="btn small" id="pinSubmit" type="button">Enter</button>
+    </div>
+    <div class="msg" id="loginMsg" style="color:#B0453A;"></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="brand-eyebrow">Technical Office &amp; Project Studies</div>
+      <h1>Site Hours</h1>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+      <div class="stamp">
+        SHEET NO. <b id="stampMonth">—</b><br>
+        TEAM LOG — SHARED
+      </div>
+      <div class="userbar">
+        <span id="whoAmI">—</span>
+        <button class="btn secondary" id="switchUserBtn" type="button">Switch user</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="entry" class="active">Log Hours</button>
+    <button data-tab="team" class="mgr-only">Team &amp; Activities</button>
+    <button data-tab="dashboard" class="mgr-only">Dashboard</button>
+    <button data-tab="report" class="mgr-only">Monthly Report</button>
+  </nav>
+
+  <!-- ENTRY -->
+  <section class="panel active" id="panel-entry">
+    <div class="card">
+      <h2>New entry <span class="tag">shared log</span></h2>
+      <form id="entryForm">
+        <div class="grid3">
+          <div class="field">
+            <label>Employee</label>
+            <select id="f-employee" required></select>
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="f-date" required>
+          </div>
+          <div class="field">
+            <label>Hours</label>
+            <input type="number" id="f-hours" min="0.25" max="24" step="0.25" placeholder="e.g. 7.5" required>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Department</label>
+            <select id="f-department" required></select>
+          </div>
+          <div class="field">
+            <label>Activity</label>
+            <select id="f-activity" required></select>
+            <div id="newActivityRow" style="display:none; margin-top:8px;">
+              <input type="text" id="f-new-activity" placeholder="Type the activity name">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Project</label>
+          <select id="f-project" required></select>
+          <div id="newProjectRow" style="display:none; margin-top:8px;">
+            <input type="text" id="f-new-project" placeholder="Type the project name">
+          </div>
+        </div>
+        <div class="field">
+          <label>Notes (optional)</label>
+          <input type="text" id="f-notes" placeholder="e.g. Structural model rev C, Level 3 clash set">
+        </div>
+        <button class="btn" type="submit">Add entry</button>
+        <span class="msg" id="entryMsg"></span>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Recent entries</h2>
+      <div class="toolbar">
+        <div class="field">
+          <label>Filter by month</label>
+          <input type="month" id="filterMonth">
+        </div>
+        <div class="field">
+          <label>Filter by department</label>
+          <select id="filterDept"><option value="">All departments</option></select>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>Project</th><th>Activity</th><th>Hours</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="entryTableBody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="entryEmpty" style="display:none;">No entries logged yet for this filter.</div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section class="panel" id="panel-team">
+    <div class="grid2">
+      <div class="card">
+        <h2>Team members</h2>
+        <form id="employeeForm" style="margin-bottom:14px;">
+          <div class="field">
+            <label>Name</label>
+            <input type="text" id="emp-name" placeholder="Full name" required>
+          </div>
+          <div class="field">
+            <label>Home department</label>
+            <select id="emp-dept" required></select>
+          </div>
+          <button class="btn small" type="submit">Add member</button>
+        </form>
+        <div id="employeeList"></div>
+      </div>
+
+      <div class="card">
+        <h2>Manager access</h2>
+        <p style="font-size:12px; color:var(--slate); margin-top:0;">This code is required to sign in as Eng. Hany (Manager). Share it only with the manager.</p>
+        <form id="pinForm" style="display:flex; gap:8px; align-items:flex-end;">
+          <div class="field" style="margin-bottom:0; flex:1;">
+            <label>Access code</label>
+            <input type="text" id="pin-value" required>
+          </div>
+          <button class="btn small secondary" type="submit">Update</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Projects</h2>
+        <form id="projectForm" style="margin-bottom:14px;">
+          <div class="field">
+            <label>New project</label>
+            <input type="text" id="new-project-name" placeholder="e.g. Al Noor Tower — Structural Package">
+          </div>
+          <button class="btn small secondary" type="submit">Add project</button>
+        </form>
+        <div id="projectList"></div>
+      </div>
+
+      <div class="card">
+        <h2>Departments &amp; activities</h2>
+        <form id="deptForm" style="margin-bottom:14px;">
+          <div class="field">
+            <label>New department</label>
+            <input type="text" id="new-dept-name" placeholder="e.g. Technical Office — Tekla">
+          </div>
+          <button class="btn small secondary" type="submit">Add department</button>
+        </form>
+        <div id="deptList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="panel" id="panel-dashboard">
+    <div class="toolbar">
+      <div class="field">
+        <label>Month</label>
+        <input type="month" id="dashMonth">
+      </div>
+    </div>
+
+    <div class="grid3" style="margin-bottom:18px;">
+      <div class="kpi"><div class="num" id="kpiTotal">0</div><div class="lbl">Total hours</div></div>
+      <div class="kpi"><div class="num" id="kpiEmployees">0</div><div class="lbl">Active team members</div></div>
+      <div class="kpi"><div class="num" id="kpiEntries">0</div><div class="lbl">Logged entries</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Hours by department</h2>
+        <div class="chart-box" id="chartDept"></div>
+      </div>
+      <div class="card">
+        <h2>Hours by activity</h2>
+        <div class="chart-box" id="chartActivity"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Hours by team member</h2>
+      <div class="chart-box" id="chartEmployee"></div>
+    </div>
+    <div class="card">
+      <h2>Hours by project</h2>
+      <div class="chart-box" id="chartProject"></div>
+    </div>
+  </section>
+
+  <!-- REPORT -->
+  <section class="panel" id="panel-report">
+    <div class="card">
+      <h2>Monthly report</h2>
+      <div class="toolbar">
+        <div class="field">
+          <label>Month</label>
+          <input type="month" id="reportMonth">
+        </div>
+        <button class="btn secondary small" id="exportCsv" type="button" style="align-self:flex-end;">Export CSV</button>
+        <button class="btn small" id="printReport" type="button" style="align-self:flex-end;">Print / Save PDF</button>
+      </div>
+      <div id="reportContent"></div>
+    </div>
+  </section>
+
+  <footer class="note">DATA IS SHARED ACROSS THE TEAM — VISIBLE TO ANYONE USING THIS TOOL</footer>
+</div>
+
+<script>
+const DEFAULT_DATA = {
+  departments: {
+    "Technical Office — Tekla": ["3D Modeling","Detailing","Drawing Production","Model Review","Clash Coordination"],
+    "Technical Office — SolidWorks": ["Part Modeling","Assembly Design","Drafting","Design Review","Revisions"],
+    "Project Studies": ["Feasibility Study","Quantity Takeoff","Cost Estimation","Technical Report","Client Coordination"]
+  },
+  employees: [
+    {id:"emp-osama", name:"Osama", department:"Technical Office — Tekla"},
+    {id:"emp-gaber", name:"Mohamed Gaber", department:"Technical Office — Tekla"},
+    {id:"emp-basim", name:"Amen Basim", department:"Technical Office — SolidWorks"},
+    {id:"emp-allam", name:"Mohamed Allam", department:"Project Studies"}
+  ],
+  entries: [],
+  projects: [],
+  managerPin: "1234"
+};
+const MANAGER_NAME = "Eng. Hany";
+
+let DATA = null;
+let charts = {};
+let currentUser = null; // { type:'employee', id } or { type:'manager' }
+const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+async function loadData(){
+  try{
+    const res = await window.storage.get('ts-data', true);
+    DATA = res && res.value ? JSON.parse(res.value) : structuredClone(DEFAULT_DATA);
+  }catch(e){
+    DATA = structuredClone(DEFAULT_DATA);
+  }
+  if(!DATA.departments) DATA.departments = structuredClone(DEFAULT_DATA.departments);
+  if(!DATA.employees || DATA.employees.length===0) DATA.employees = structuredClone(DEFAULT_DATA.employees);
+  if(!DATA.entries) DATA.entries = [];
+  if(!DATA.managerPin) DATA.managerPin = DEFAULT_DATA.managerPin;
+  if(!DATA.projects) DATA.projects = [];
+}
+
+async function saveData(){
+  try{
+    await window.storage.set('ts-data', JSON.stringify(DATA), true);
+  }catch(e){
+    console.error('Storage error', e);
+  }
+}
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function currentMonthStr(){ return new Date().toISOString().slice(0,7); }
+
+function deptOptionsHTML(selected){
+  return Object.keys(DATA.departments).map(d=>`<option value="${escapeHtml(d)}" ${d===selected?'selected':''}>${escapeHtml(d)}</option>`).join('');
+}
+function activityOptionsHTML(dept, selected){
+  const acts = DATA.departments[dept] || [];
+  return acts.map(a=>`<option value="${escapeHtml(a)}" ${a===selected?'selected':''}>${escapeHtml(a)}</option>`).join('')
+    + `<option value="__new__">+ Add new activity…</option>`;
+}
+function projectOptionsHTML(selected){
+  const placeholder = DATA.projects.length===0 ? `<option value="" disabled ${!selected?'selected':''}>No projects yet — add one</option>` : '';
+  return placeholder
+    + DATA.projects.map(p=>`<option value="${escapeHtml(p)}" ${p===selected?'selected':''}>${escapeHtml(p)}</option>`).join('')
+    + `<option value="__new__">+ Add new project…</option>`;
+}
+function employeeOptionsHTML(){
+  return DATA.employees.map(e=>`<option value="${e.id}">${escapeHtml(e.name)} — ${escapeHtml(e.department)}</option>`).join('');
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function employeeName(id){ const e=DATA.employees.find(x=>x.id===id); return e?e.name:'—'; }
+
+// ---------- LOGIN / ACCESS CONTROL ----------
+function isManager(){ return currentUser && currentUser.type==='manager'; }
+
+function renderLoginScreen(){
+  const whoList = document.getElementById('whoList');
+  whoList.innerHTML = DATA.employees.map(e=>
+    `<button class="who-btn" data-who="emp:${e.id}">${escapeHtml(e.name)}</button>`
+  ).join('') + `<button class="who-btn manager" data-who="manager">${escapeHtml(MANAGER_NAME)} — Manager</button>`;
+
+  whoList.querySelectorAll('[data-who]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const val = b.dataset.who;
+      if(val==='manager'){
+        document.getElementById('pinRow').classList.add('show');
+        document.getElementById('pinInput').focus();
+      } else {
+        currentUser = { type:'employee', id: val.split(':')[1] };
+        enterApp();
+      }
+    });
+  });
+}
+document.getElementById('pinSubmit').addEventListener('click', tryManagerPin);
+document.getElementById('pinInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryManagerPin(); });
+function tryManagerPin(){
+  const val = document.getElementById('pinInput').value;
+  if(val === DATA.managerPin){
+    currentUser = { type:'manager' };
+    document.getElementById('loginMsg').textContent = '';
+    enterApp();
+  } else {
+    document.getElementById('loginMsg').textContent = 'Incorrect access code.';
+  }
+}
+
+function enterApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('pinInput').value='';
+  document.getElementById('loginMsg').textContent='';
+
+  const mgr = isManager();
+  document.querySelectorAll('.mgr-only').forEach(el=> el.style.display = mgr ? '' : 'none');
+  document.getElementById('whoAmI').textContent = mgr ? `Signed in — ${MANAGER_NAME} (Manager)` : `Signed in — ${employeeName(currentUser.id)}`;
+
+  // always land on Log Hours tab on entry
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector('nav.tabs button[data-tab="entry"]').classList.add('active');
+  document.getElementById('panel-entry').classList.add('active');
+
+  refreshEntryFormOptions();
+  toggleNewActivityRow();
+  toggleNewProjectRow();
+  renderEntryTable();
+}
+
+document.getElementById('switchUserBtn').addEventListener('click', ()=>{
+  currentUser = null;
+  document.getElementById('loginScreen').style.display='flex';
+  renderLoginScreen();
+});
+
+// ---------- TABS ----------
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(btn.classList.contains('mgr-only') && !isManager()) return;
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='dashboard') renderDashboard();
+    if(btn.dataset.tab==='report') renderReport();
+    if(btn.dataset.tab==='team') renderTeamPanel();
+  });
+});
+
+// ---------- ENTRY FORM ----------
+function refreshEntryFormOptions(){
+  document.getElementById('f-employee').innerHTML = employeeOptionsHTML();
+  if(!isManager() && currentUser){
+    document.getElementById('f-employee').value = currentUser.id;
+    document.getElementById('f-employee').disabled = true;
+    const emp = DATA.employees.find(x=>x.id===currentUser.id);
+    if(emp){
+      document.getElementById('f-department').innerHTML = `<option value="${escapeHtml(emp.department)}">${escapeHtml(emp.department)}</option>`;
+      document.getElementById('f-department').disabled = true;
+    }
+  } else {
+    document.getElementById('f-employee').disabled = false;
+    document.getElementById('f-department').disabled = false;
+    document.getElementById('f-department').innerHTML = deptOptionsHTML();
+  }
+  const dept = document.getElementById('f-department').value;
+  document.getElementById('f-activity').innerHTML = activityOptionsHTML(dept);
+  document.getElementById('f-project').innerHTML = projectOptionsHTML();
+  document.getElementById('filterDept').innerHTML = '<option value="">All departments</option>' + deptOptionsHTML();
+  // employees only see their own entries — hide the department filter, it's redundant for a single-person view
+  document.getElementById('filterDept').closest('.field').style.display = isManager() ? '' : 'none';
+}
+
+document.getElementById('f-employee').addEventListener('change', (e)=>{
+  const emp = DATA.employees.find(x=>x.id===e.target.value);
+  if(emp){
+    document.getElementById('f-department').value = emp.department;
+    document.getElementById('f-activity').innerHTML = activityOptionsHTML(emp.department);
+    toggleNewActivityRow();
+  }
+});
+document.getElementById('f-department').addEventListener('change', (e)=>{
+  document.getElementById('f-activity').innerHTML = activityOptionsHTML(e.target.value);
+  toggleNewActivityRow();
+});
+document.getElementById('f-activity').addEventListener('change', toggleNewActivityRow);
+function toggleNewActivityRow(){
+  const show = document.getElementById('f-activity').value === '__new__';
+  const row = document.getElementById('newActivityRow');
+  row.style.display = show ? 'block' : 'none';
+  document.getElementById('f-new-activity').required = show;
+  if(show) document.getElementById('f-new-activity').focus();
+}
+
+document.getElementById('f-project').addEventListener('change', toggleNewProjectRow);
+function toggleNewProjectRow(){
+  const show = document.getElementById('f-project').value === '__new__';
+  const row = document.getElementById('newProjectRow');
+  row.style.display = show ? 'block' : 'none';
+  document.getElementById('f-new-project').required = show;
+  if(show) document.getElementById('f-new-project').focus();
+}
+
+document.getElementById('entryForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(DATA.employees.length===0){
+    document.getElementById('entryMsg').textContent = 'Add a team member first (see "Team & Activities" tab).';
+    document.getElementById('entryMsg').style.color = '#B0453A';
+    return;
+  }
+  const dept = document.getElementById('f-department').value;
+  let activity = document.getElementById('f-activity').value;
+  if(activity === '__new__'){
+    const typed = document.getElementById('f-new-activity').value.trim();
+    if(!typed){
+      document.getElementById('entryMsg').style.color = '#B0453A';
+      document.getElementById('entryMsg').textContent = 'Type the new activity name.';
+      return;
+    }
+    activity = typed;
+    if(!DATA.departments[dept].some(a=>a.toLowerCase()===typed.toLowerCase())){
+      DATA.departments[dept].push(typed);
+    }
+  }
+  let project = document.getElementById('f-project').value;
+  if(project === '__new__'){
+    const typedP = document.getElementById('f-new-project').value.trim();
+    if(!typedP){
+      document.getElementById('entryMsg').style.color = '#B0453A';
+      document.getElementById('entryMsg').textContent = 'Type the new project name.';
+      return;
+    }
+    project = typedP;
+    if(!DATA.projects.some(p=>p.toLowerCase()===typedP.toLowerCase())){
+      DATA.projects.push(typedP);
+    }
+  }
+  if(!project){
+    document.getElementById('entryMsg').style.color = '#B0453A';
+    document.getElementById('entryMsg').textContent = 'Choose or add a project.';
+    return;
+  }
+  const entry = {
+    id: uid(),
+    employeeId: document.getElementById('f-employee').value,
+    date: document.getElementById('f-date').value,
+    department: dept,
+    activity: activity,
+    project: project,
+    hours: parseFloat(document.getElementById('f-hours').value),
+    notes: document.getElementById('f-notes').value.trim()
+  };
+  DATA.entries.push(entry);
+  await saveData();
+  document.getElementById('entryForm').reset();
+  document.getElementById('f-date').value = todayISO();
+  refreshEntryFormOptions();
+  toggleNewActivityRow();
+  toggleNewProjectRow();
+  document.getElementById('entryMsg').style.color = 'var(--ok)';
+  document.getElementById('entryMsg').textContent = 'Entry added.';
+  setTimeout(()=>document.getElementById('entryMsg').textContent='',2000);
+  renderEntryTable();
+});
+
+function renderEntryTable(){
+  const monthFilter = document.getElementById('filterMonth').value;
+  const deptFilter = document.getElementById('filterDept').value;
+  let list = DATA.entries.slice().sort((a,b)=> b.date.localeCompare(a.date));
+  if(!isManager() && currentUser) list = list.filter(e=>e.employeeId===currentUser.id);
+  if(monthFilter) list = list.filter(e=>e.date.startsWith(monthFilter));
+  if(deptFilter) list = list.filter(e=>e.department===deptFilter);
+
+  const tbody = document.getElementById('entryTableBody');
+  const empty = document.getElementById('entryEmpty');
+  if(list.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const mgr = isManager();
+  tbody.innerHTML = list.map(e=>`
+    <tr>
+      <td>${e.date}</td>
+      <td>${escapeHtml(employeeName(e.employeeId))}</td>
+      <td><span class="dept-badge">${escapeHtml(e.department)}</span></td>
+      <td>${escapeHtml(e.project||'—')}</td>
+      <td>${escapeHtml(e.activity)}</td>
+      <td class="hours">${e.hours.toFixed(2)}</td>
+      <td>${escapeHtml(e.notes||'')}</td>
+      <td>${mgr || e.employeeId===currentUser.id ? `<button class="btn danger" data-del="${e.id}">Delete</button>` : ''}</td>
+    </tr>`).join('');
+  tbody.querySelectorAll('[data-del]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      DATA.entries = DATA.entries.filter(x=>x.id!==b.dataset.del);
+      await saveData();
+      renderEntryTable();
+    });
+  });
+}
+document.getElementById('filterMonth').addEventListener('change', renderEntryTable);
+document.getElementById('filterDept').addEventListener('change', renderEntryTable);
+
+// ---------- TEAM & ACTIVITIES ----------
+function renderTeamPanel(){
+  document.getElementById('emp-dept').innerHTML = deptOptionsHTML();
+  document.getElementById('pin-value').value = DATA.managerPin;
+
+  const list = document.getElementById('employeeList');
+  if(DATA.employees.length===0){
+    list.innerHTML = '<div class="empty-state">No team members yet. Add the first one above.</div>';
+  } else {
+    list.innerHTML = DATA.employees.map(e=>`
+      <div class="list-item">
+        <span>${escapeHtml(e.name)} <span class="dept-badge">${escapeHtml(e.department)}</span></span>
+        <button class="btn danger" data-del-emp="${e.id}">Remove</button>
+      </div>`).join('');
+    list.querySelectorAll('[data-del-emp]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        DATA.employees = DATA.employees.filter(x=>x.id!==b.dataset.delEmp);
+        await saveData();
+        renderTeamPanel(); refreshEntryFormOptions();
+      });
+    });
+  }
+
+  const projectList = document.getElementById('projectList');
+  if(DATA.projects.length===0){
+    projectList.innerHTML = '<div class="empty-state">No projects yet. Add the first one above.</div>';
+  } else {
+    projectList.innerHTML = DATA.projects.map(p=>`
+      <div class="list-item">
+        <span>${escapeHtml(p)}</span>
+        <button class="btn danger" data-del-proj="${escapeHtml(p)}">Remove</button>
+      </div>`).join('');
+    projectList.querySelectorAll('[data-del-proj]').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        DATA.projects = DATA.projects.filter(x=>x!==b.dataset.delProj);
+        await saveData();
+        renderTeamPanel(); refreshEntryFormOptions();
+      });
+    });
+  }
+
+  const deptList = document.getElementById('deptList');
+  deptList.innerHTML = Object.entries(DATA.departments).map(([dept, acts])=>`
+    <div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--paper-line);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <strong style="font-family:var(--font-display); font-size:13px;">${escapeHtml(dept)}</strong>
+        <button class="btn danger" data-del-dept="${escapeHtml(dept)}">Remove dept.</button>
+      </div>
+      <div>${acts.map(a=>`<span class="activity-chip">${escapeHtml(a)} <button data-del-act="${escapeHtml(dept)}|||${escapeHtml(a)}">&times;</button></span>`).join('')}</div>
+      <form data-add-act="${escapeHtml(dept)}" style="display:flex; gap:6px; margin-top:8px;">
+        <input type="text" placeholder="New activity name" style="flex:1;">
+        <button class="btn small secondary" type="submit">Add</button>
+      </form>
+    </div>`).join('');
+
+  deptList.querySelectorAll('[data-del-dept]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      if(Object.keys(DATA.departments).length<=1){ alert('At least one department is required.'); return; }
+      delete DATA.departments[b.dataset.delDept];
+      await saveData();
+      renderTeamPanel(); refreshEntryFormOptions();
+    });
+  });
+  deptList.querySelectorAll('[data-del-act]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const [dept, act] = b.dataset.delAct.split('|||');
+      DATA.departments[dept] = DATA.departments[dept].filter(a=>a!==act);
+      await saveData();
+      renderTeamPanel(); refreshEntryFormOptions();
+    });
+  });
+  deptList.querySelectorAll('form[data-add-act]').forEach(f=>{
+    f.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const input = f.querySelector('input');
+      const val = input.value.trim();
+      if(!val) return;
+      const dept = f.dataset.addAct;
+      if(!DATA.departments[dept].includes(val)) DATA.departments[dept].push(val);
+      await saveData();
+      renderTeamPanel(); refreshEntryFormOptions();
+    });
+  });
+}
+
+document.getElementById('employeeForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const name = document.getElementById('emp-name').value.trim();
+  const dept = document.getElementById('emp-dept').value;
+  if(!name) return;
+  DATA.employees.push({id:uid(), name, department:dept});
+  await saveData();
+  document.getElementById('employeeForm').reset();
+  renderTeamPanel(); refreshEntryFormOptions();
+});
+
+document.getElementById('pinForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const val = document.getElementById('pin-value').value.trim();
+  if(!val) return;
+  DATA.managerPin = val;
+  await saveData();
+});
+
+document.getElementById('deptForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const input = document.getElementById('new-dept-name');
+  const val = input.value.trim();
+  if(!val || DATA.departments[val]) return;
+  DATA.departments[val] = [];
+  await saveData();
+  input.value='';
+  renderTeamPanel(); refreshEntryFormOptions();
+});
+
+document.getElementById('projectForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const input = document.getElementById('new-project-name');
+  const val = input.value.trim();
+  if(!val || DATA.projects.some(p=>p.toLowerCase()===val.toLowerCase())) return;
+  DATA.projects.push(val);
+  await saveData();
+  input.value='';
+  renderTeamPanel(); refreshEntryFormOptions();
+});
+
+// ---------- DASHBOARD ----------
+function monthEntries(monthStr){
+  return DATA.entries.filter(e=>e.date.startsWith(monthStr));
+}
+function sumBy(list, keyFn){
+  const map = {};
+  list.forEach(e=>{ const k=keyFn(e); map[k]=(map[k]||0)+e.hours; });
+  return map;
+}
+const CHART_COLORS = ['#1F5C7A','#D98A2B','#4FA3C7','#3E7A55','#B0453A','#8B6BAE','#C9A227','#6B7F8C'];
+
+// ---- self-contained SVG/CSS chart builders (no external libraries) ----
+function donutChartHTML(entries, colors){
+  const total = entries.reduce((s,e)=>s+e[1],0);
+  if(total<=0) return '<div class="empty-state">No data for this month yet.</div>';
+  const size=180, thickness=26, r=(size-thickness)/2, circ=2*Math.PI*r;
+  let cumulative=0;
+  const circles = entries.map(([label,val],i)=>{
+    const frac = val/total;
+    const segLen = circ*frac;
+    const c = `<circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${colors[i%colors.length]}" stroke-width="${thickness}" stroke-dasharray="${segLen} ${circ-segLen}" stroke-dashoffset="${-cumulative}" />`;
+    cumulative += segLen;
+    return c;
+  }).join('');
+  const legend = entries.map(([label,val],i)=>`
+    <div class="legend-item">
+      <span class="dot" style="background:${colors[i%colors.length]}"></span>
+      <span class="name">${escapeHtml(label)}</span>
+      <b>${val.toFixed(1)}h</b>
+      <span class="pct">${((val/total)*100).toFixed(0)}%</span>
+    </div>`).join('');
+  return `<div class="chart-flex">
+    <div class="donut-wrap">
+      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${circles}</svg>
+      <div class="donut-center"><div class="num">${total.toFixed(1)}</div><div class="lbl">Hours</div></div>
+    </div>
+    <div class="legend">${legend}</div>
+  </div>`;
+}
+
+function hBarChartHTML(entries, color){
+  if(entries.length===0) return '<div class="empty-state">No data for this month yet.</div>';
+  const max = Math.max(...entries.map(e=>e[1]));
+  return entries.map(([label,val])=>`
+    <div class="bar-row">
+      <div class="bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${max>0?(val/max*100):0}%; background:${color};"></div></div>
+      <div class="bar-value">${val.toFixed(1)}</div>
+    </div>`).join('');
+}
+
+function vBarChartHTML(entries, color){
+  if(entries.length===0) return '<div class="empty-state">No data for this month yet.</div>';
+  const max = Math.max(...entries.map(e=>e[1]));
+  return `<div class="vbar-chart">` + entries.map(([label,val])=>`
+    <div class="vbar-col">
+      <div class="vbar-value">${val.toFixed(1)}</div>
+      <div class="vbar-track"><div class="vbar-fill" style="height:${max>0?(val/max*100):0}%; background:${color};"></div></div>
+      <div class="vbar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+    </div>`).join('') + `</div>`;
+}
+
+function renderDashboard(){
+  const month = document.getElementById('dashMonth').value || currentMonthStr();
+  document.getElementById('dashMonth').value = month;
+  const [y,m] = month.split('-');
+  document.getElementById('stampMonth').textContent = `${monthNames[parseInt(m,10)-1]} ${y}`;
+
+  const list = monthEntries(month);
+  const total = list.reduce((s,e)=>s+e.hours,0);
+  document.getElementById('kpiTotal').textContent = total.toFixed(1);
+  document.getElementById('kpiEntries').textContent = list.length;
+  document.getElementById('kpiEmployees').textContent = new Set(list.map(e=>e.employeeId)).size;
+
+  const byDept = sumBy(list, e=>e.department);
+  const byAct = sumBy(list, e=>e.activity);
+  const byEmp = sumBy(list, e=>employeeName(e.employeeId));
+  const byProj = sumBy(list, e=>e.project||'Unassigned');
+
+  const deptEntries = Object.entries(byDept).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('chartDept').innerHTML = donutChartHTML(deptEntries, CHART_COLORS);
+
+  const actEntries = Object.entries(byAct).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  document.getElementById('chartActivity').innerHTML = hBarChartHTML(actEntries, '#1F5C7A');
+
+  const projEntries = Object.entries(byProj).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  document.getElementById('chartProject').innerHTML = hBarChartHTML(projEntries, '#3E7A55');
+
+  const empEntries = Object.entries(byEmp).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('chartEmployee').innerHTML = vBarChartHTML(empEntries, '#D98A2B');
+}
+document.getElementById('dashMonth').addEventListener('change', renderDashboard);
+
+// ---------- REPORT ----------
+function renderReport(){
+  const month = document.getElementById('reportMonth').value || currentMonthStr();
+  document.getElementById('reportMonth').value = month;
+  const list = monthEntries(month);
+  const container = document.getElementById('reportContent');
+
+  if(list.length===0){
+    container.innerHTML = '<div class="empty-state">No entries logged for this month yet.</div>';
+    return;
+  }
+
+  const byDept = {};
+  list.forEach(e=>{
+    byDept[e.department] = byDept[e.department] || {};
+    const key = employeeName(e.employeeId)+'|||'+(e.project||'Unassigned')+'|||'+e.activity;
+    byDept[e.department][key] = (byDept[e.department][key]||0)+e.hours;
+  });
+
+  let grandTotal = 0;
+  let html = '<div style="overflow-x:auto;"><table><thead><tr><th>Department</th><th>Team member</th><th>Project</th><th>Activity</th><th>Hours</th></tr></thead><tbody>';
+  Object.entries(byDept).forEach(([dept, rows])=>{
+    let deptTotal = 0;
+    const rowsHtml = Object.entries(rows).sort((a,b)=>a[0].localeCompare(b[0])).map(([key,hrs])=>{
+      deptTotal += hrs;
+      const [emp, proj, act] = key.split('|||');
+      return `<tr><td><span class="dept-badge">${escapeHtml(dept)}</span></td><td>${escapeHtml(emp)}</td><td>${escapeHtml(proj)}</td><td>${escapeHtml(act)}</td><td class="hours">${hrs.toFixed(2)}</td></tr>`;
+    }).join('');
+    grandTotal += deptTotal;
+    html += rowsHtml;
+    html += `<tr class="subtotal"><td colspan="4">${escapeHtml(dept)} — subtotal</td><td class="hours">${deptTotal.toFixed(2)}</td></tr>`;
+  });
+  html += `<tr class="grandtotal"><td colspan="4">GRAND TOTAL</td><td class="hours">${grandTotal.toFixed(2)}</td></tr>`;
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+document.getElementById('reportMonth').addEventListener('change', renderReport);
+
+document.getElementById('printReport').addEventListener('click', ()=>window.print());
+
+document.getElementById('exportCsv').addEventListener('click', ()=>{
+  const month = document.getElementById('reportMonth').value || currentMonthStr();
+  const list = monthEntries(month);
+  let csv = 'Date,Employee,Department,Project,Activity,Hours,Notes\n';
+  list.sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{
+    const row = [e.date, employeeName(e.employeeId), e.department, e.project||'Unassigned', e.activity, e.hours, (e.notes||'').replace(/"/g,'""')];
+    csv += row.map(v=>`"${v}"`).join(',') + '\n';
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `timesheet-report-${month}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ---------- INIT ----------
+async function init(){
+  await loadData();
+  document.getElementById('f-date').value = todayISO();
+  document.getElementById('dashMonth').value = currentMonthStr();
+  document.getElementById('reportMonth').value = currentMonthStr();
+  const [y,m] = currentMonthStr().split('-');
+  document.getElementById('stampMonth').textContent = `${monthNames[parseInt(m,10)-1]} ${y}`;
+  renderLoginScreen();
+}
+init();
+</script>
+</body>
+</html>
