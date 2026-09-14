@@ -183,12 +183,30 @@
   .who-btn:hover{border-color:var(--blueprint); background:rgba(31,92,122,.05);}
   .who-btn.manager{border-color:var(--amber); color:#8A5A16;}
   .who-btn.manager:hover{background:rgba(217,138,43,.08);}
+  .who-name{display:block;}
+  .who-title{display:block; font-size:11.5px; font-weight:500; color:var(--slate); text-transform:none; letter-spacing:0; margin-top:2px;}
+  .who-btn.manager .who-title{color:#8A5A16; opacity:.75;}
   .pin-row{display:none; gap:8px; margin-top:10px;}
   .pin-row.show{display:flex;}
   .userbar{
     display:flex; align-items:center; gap:10px; font-family:var(--font-mono); font-size:11.5px; color:var(--slate);
   }
   .userbar .btn{padding:5px 10px; font-size:11px;}
+
+  /* ---- read-only info display (replaces selects the user can't change) ---- */
+  .readonly-info{
+    font-family:var(--font-body); font-size:14px; font-weight:600; color:var(--ink);
+    padding:9px 2px; min-height:20px;
+  }
+
+  /* ---- approval status ---- */
+  .status-badge{
+    font-family:var(--font-mono); font-size:10px; padding:3px 9px; border-radius:10px;
+    display:inline-block; white-space:nowrap; letter-spacing:.03em;
+  }
+  .status-badge.pending{background:#F5E6C8; color:#8A5A16;}
+  .status-badge.approved{background:#DCEEE2; color:#2F6B45;}
+  .hours-edit-input{width:78px; font-family:var(--font-mono); padding:5px 6px; border:1px solid var(--blueprint-light); border-radius:4px;}
 </style>
 </head>
 <body>
@@ -241,7 +259,8 @@
         <div class="grid3">
           <div class="field">
             <label>Employee</label>
-            <select id="f-employee" required></select>
+            <select id="f-employee"></select>
+            <div class="readonly-info" id="f-employee-display" style="display:none;"></div>
           </div>
           <div class="field">
             <label>Date</label>
@@ -255,7 +274,8 @@
         <div class="grid2">
           <div class="field">
             <label>Department</label>
-            <select id="f-department" required></select>
+            <select id="f-department"></select>
+            <div class="readonly-info" id="f-department-display" style="display:none;"></div>
           </div>
           <div class="field">
             <label>Activity</label>
@@ -295,7 +315,7 @@
       </div>
       <div style="overflow-x:auto;">
         <table>
-          <thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>Project</th><th>Activity</th><th>Hours</th><th>Notes</th><th></th></tr></thead>
+          <thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>Project</th><th>Activity</th><th>Hours</th><th>Notes</th><th>Status</th><th></th></tr></thead>
           <tbody id="entryTableBody"></tbody>
         </table>
       </div>
@@ -314,6 +334,10 @@
             <input type="text" id="emp-name" placeholder="Full name" required>
           </div>
           <div class="field">
+            <label>Job title</label>
+            <input type="text" id="emp-title" placeholder="e.g. Mechanical Design Engineer">
+          </div>
+          <div class="field">
             <label>Home department</label>
             <select id="emp-dept" required></select>
           </div>
@@ -324,7 +348,7 @@
 
       <div class="card">
         <h2>Manager access</h2>
-        <p style="font-size:12px; color:var(--slate); margin-top:0;">This code is required to sign in as Eng. Hany (Manager). Share it only with the manager.</p>
+        <p style="font-size:12px; color:var(--slate); margin-top:0;">This code is required to sign in as the manager. Share it only with them.</p>
         <form id="pinForm" style="display:flex; gap:8px; align-items:flex-end;">
           <div class="field" style="margin-bottom:0; flex:1;">
             <label>Access code</label>
@@ -422,16 +446,17 @@ const DEFAULT_DATA = {
     "Project Studies": ["Feasibility Study","Quantity Takeoff","Cost Estimation","Technical Report","Client Coordination"]
   },
   employees: [
-    {id:"emp-osama", name:"Osama", department:"Technical Office — Tekla"},
-    {id:"emp-gaber", name:"Mohamed Gaber", department:"Technical Office — Tekla"},
-    {id:"emp-basim", name:"Amen Basim", department:"Technical Office — SolidWorks"},
-    {id:"emp-allam", name:"Mohamed Allam", department:"Project Studies"}
+    {id:"emp-osama", name:"Osama Mohammed", title:"Steel Detailer Engineer", department:"Technical Office — Tekla"},
+    {id:"emp-gaber", name:"Mohamed Gaber", title:"Senior Steel Detailer", department:"Technical Office — Tekla"},
+    {id:"emp-basim", name:"Amen Basim", title:"Mechanical Design Engineer", department:"Technical Office — SolidWorks"},
+    {id:"emp-allam", name:"Mohamed Allam", title:"Integrated System Technical Studies Engineer", department:"Project Studies"}
   ],
   entries: [],
   projects: [],
   managerPin: "1234"
 };
-const MANAGER_NAME = "Eng. Hany";
+const MANAGER_NAME = "Hany Nasr";
+const MANAGER_TITLE = "Technical Office Manager";
 
 let DATA = null;
 let charts = {};
@@ -447,7 +472,22 @@ async function loadData(){
   }
   if(!DATA.departments) DATA.departments = structuredClone(DEFAULT_DATA.departments);
   if(!DATA.employees || DATA.employees.length===0) DATA.employees = structuredClone(DEFAULT_DATA.employees);
+  // backfill/patch titles and full names for records saved before job titles existed
+  const NAME_TITLE_PATCH = {
+    "emp-osama": {name:"Osama Mohammed", title:"Steel Detailer Engineer"},
+    "emp-gaber": {name:"Mohamed Gaber", title:"Senior Steel Detailer"},
+    "emp-basim": {name:"Amen Basim", title:"Mechanical Design Engineer"},
+    "emp-allam": {name:"Mohamed Allam", title:"Integrated System Technical Studies Engineer"}
+  };
+  DATA.employees.forEach(e=>{
+    if(!e.title){
+      const patch = NAME_TITLE_PATCH[e.id];
+      e.title = patch ? patch.title : '';
+      if(patch && !e.name.includes(' ')) e.name = patch.name; // e.g. "Osama" -> "Osama Mohammed"
+    }
+  });
   if(!DATA.entries) DATA.entries = [];
+  DATA.entries.forEach(e=>{ if(!e.status) e.status = 'approved'; }); // entries logged before approvals existed
   if(!DATA.managerPin) DATA.managerPin = DEFAULT_DATA.managerPin;
   if(!DATA.projects) DATA.projects = [];
 }
@@ -479,10 +519,11 @@ function projectOptionsHTML(selected){
     + `<option value="__new__">+ Add new project…</option>`;
 }
 function employeeOptionsHTML(){
-  return DATA.employees.map(e=>`<option value="${e.id}">${escapeHtml(e.name)} — ${escapeHtml(e.department)}</option>`).join('');
+  return DATA.employees.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}${e.title?' — '+escapeHtml(e.title):''}</option>`).join('');
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function employeeName(id){ const e=DATA.employees.find(x=>x.id===id); return e?e.name:'—'; }
+function employeeTitle(id){ const e=DATA.employees.find(x=>x.id===id); return e?(e.title||''):''; }
 
 // ---------- LOGIN / ACCESS CONTROL ----------
 function isManager(){ return currentUser && currentUser.type==='manager'; }
@@ -490,8 +531,8 @@ function isManager(){ return currentUser && currentUser.type==='manager'; }
 function renderLoginScreen(){
   const whoList = document.getElementById('whoList');
   whoList.innerHTML = DATA.employees.map(e=>
-    `<button class="who-btn" data-who="emp:${e.id}">${escapeHtml(e.name)}</button>`
-  ).join('') + `<button class="who-btn manager" data-who="manager">${escapeHtml(MANAGER_NAME)} — Manager</button>`;
+    `<button class="who-btn" data-who="emp:${e.id}"><span class="who-name">${escapeHtml(e.name)}</span>${e.title?`<span class="who-title">${escapeHtml(e.title)}</span>`:''}</button>`
+  ).join('') + `<button class="who-btn manager" data-who="manager"><span class="who-name">${escapeHtml(MANAGER_NAME)}</span><span class="who-title">${escapeHtml(MANAGER_TITLE)}</span></button>`;
 
   whoList.querySelectorAll('[data-who]').forEach(b=>{
     b.addEventListener('click', ()=>{
@@ -526,7 +567,7 @@ function enterApp(){
 
   const mgr = isManager();
   document.querySelectorAll('.mgr-only').forEach(el=> el.style.display = mgr ? '' : 'none');
-  document.getElementById('whoAmI').textContent = mgr ? `Signed in — ${MANAGER_NAME} (Manager)` : `Signed in — ${employeeName(currentUser.id)}`;
+  document.getElementById('whoAmI').textContent = mgr ? `Signed in — ${MANAGER_NAME} (${MANAGER_TITLE})` : `Signed in — ${employeeName(currentUser.id)} (${employeeTitle(currentUser.id)})`;
 
   // always land on Log Hours tab on entry
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
@@ -562,21 +603,36 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
 
 // ---------- ENTRY FORM ----------
 function refreshEntryFormOptions(){
-  document.getElementById('f-employee').innerHTML = employeeOptionsHTML();
+  const empSelect = document.getElementById('f-employee');
+  const empDisplay = document.getElementById('f-employee-display');
+  const deptSelect = document.getElementById('f-department');
+  const deptDisplay = document.getElementById('f-department-display');
+
+  empSelect.innerHTML = employeeOptionsHTML();
+
   if(!isManager() && currentUser){
-    document.getElementById('f-employee').value = currentUser.id;
-    document.getElementById('f-employee').disabled = true;
+    // employees just see who they are and their department as plain info — not a control they can change
+    empSelect.value = currentUser.id;
+    empSelect.style.display = 'none';
+    empDisplay.style.display = 'block';
+    empDisplay.textContent = employeeName(currentUser.id);
+
     const emp = DATA.employees.find(x=>x.id===currentUser.id);
     if(emp){
-      document.getElementById('f-department').innerHTML = `<option value="${escapeHtml(emp.department)}">${escapeHtml(emp.department)}</option>`;
-      document.getElementById('f-department').disabled = true;
+      deptSelect.innerHTML = `<option value="${escapeHtml(emp.department)}">${escapeHtml(emp.department)}</option>`;
+      deptSelect.value = emp.department;
+      deptSelect.style.display = 'none';
+      deptDisplay.style.display = 'block';
+      deptDisplay.textContent = emp.department;
     }
   } else {
-    document.getElementById('f-employee').disabled = false;
-    document.getElementById('f-department').disabled = false;
-    document.getElementById('f-department').innerHTML = deptOptionsHTML();
+    empSelect.style.display = '';
+    empDisplay.style.display = 'none';
+    deptSelect.style.display = '';
+    deptDisplay.style.display = 'none';
+    deptSelect.innerHTML = deptOptionsHTML();
   }
-  const dept = document.getElementById('f-department').value;
+  const dept = deptSelect.value;
   document.getElementById('f-activity').innerHTML = activityOptionsHTML(dept);
   document.getElementById('f-project').innerHTML = projectOptionsHTML();
   document.getElementById('filterDept').innerHTML = '<option value="">All departments</option>' + deptOptionsHTML();
@@ -661,7 +717,8 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
     activity: activity,
     project: project,
     hours: parseFloat(document.getElementById('f-hours').value),
-    notes: document.getElementById('f-notes').value.trim()
+    notes: document.getElementById('f-notes').value.trim(),
+    status: isManager() ? 'approved' : 'pending'
   };
   DATA.entries.push(entry);
   await saveData();
@@ -671,10 +728,12 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
   toggleNewActivityRow();
   toggleNewProjectRow();
   document.getElementById('entryMsg').style.color = 'var(--ok)';
-  document.getElementById('entryMsg').textContent = 'Entry added.';
+  document.getElementById('entryMsg').textContent = isManager() ? 'Entry added.' : `Entry added — pending ${MANAGER_NAME}'s approval.`;
   setTimeout(()=>document.getElementById('entryMsg').textContent='',2000);
   renderEntryTable();
 });
+
+let editingEntryId = null;
 
 function renderEntryTable(){
   const monthFilter = document.getElementById('filterMonth').value;
@@ -689,20 +748,78 @@ function renderEntryTable(){
   if(list.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   const mgr = isManager();
-  tbody.innerHTML = list.map(e=>`
-    <tr>
+  tbody.innerHTML = list.map(e=>{
+    const status = e.status || 'approved';
+    const isEditing = mgr && editingEntryId===e.id;
+    const hoursCell = isEditing
+      ? `<input type="number" class="hours-edit-input" id="edit-hours-${e.id}" min="0.25" max="24" step="0.25" value="${e.hours}">`
+      : e.hours.toFixed(2);
+    const statusBadge = `<span class="status-badge ${status}">${status==='approved' ? 'Approved' : 'Pending'}</span>`;
+
+    let actions;
+    if(isEditing){
+      actions = `<div class="row-actions">
+        <button class="btn small" data-save-hours="${e.id}">Save</button>
+        <button class="btn small secondary" data-cancel-edit>Cancel</button>
+      </div>`;
+    } else {
+      const canDelete = mgr || e.employeeId===currentUser.id;
+      actions = `<div class="row-actions">
+        ${mgr && status!=='approved' ? `<button class="btn small" data-approve="${e.id}">Approve</button>` : ''}
+        ${mgr ? `<button class="btn small secondary" data-edit-hours="${e.id}">Edit hours</button>` : ''}
+        ${canDelete ? `<button class="btn danger" data-del="${e.id}">Delete</button>` : ''}
+      </div>`;
+    }
+
+    return `<tr>
       <td>${e.date}</td>
       <td>${escapeHtml(employeeName(e.employeeId))}</td>
       <td><span class="dept-badge">${escapeHtml(e.department)}</span></td>
       <td>${escapeHtml(e.project||'—')}</td>
       <td>${escapeHtml(e.activity)}</td>
-      <td class="hours">${e.hours.toFixed(2)}</td>
+      <td class="hours">${hoursCell}</td>
       <td>${escapeHtml(e.notes||'')}</td>
-      <td>${mgr || e.employeeId===currentUser.id ? `<button class="btn danger" data-del="${e.id}">Delete</button>` : ''}</td>
-    </tr>`).join('');
+      <td>${statusBadge}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+
   tbody.querySelectorAll('[data-del]').forEach(b=>{
     b.addEventListener('click', async ()=>{
       DATA.entries = DATA.entries.filter(x=>x.id!==b.dataset.del);
+      await saveData();
+      renderEntryTable();
+    });
+  });
+  tbody.querySelectorAll('[data-approve]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const entry = DATA.entries.find(x=>x.id===b.dataset.approve);
+      if(entry) entry.status = 'approved';
+      await saveData();
+      renderEntryTable();
+    });
+  });
+  tbody.querySelectorAll('[data-edit-hours]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      editingEntryId = b.dataset.editHours;
+      renderEntryTable();
+    });
+  });
+  tbody.querySelectorAll('[data-cancel-edit]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      editingEntryId = null;
+      renderEntryTable();
+    });
+  });
+  tbody.querySelectorAll('[data-save-hours]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const id = b.dataset.saveHours;
+      const input = document.getElementById('edit-hours-'+id);
+      const val = parseFloat(input.value);
+      if(!val || val<=0){ alert('Enter a valid number of hours.'); return; }
+      const entry = DATA.entries.find(x=>x.id===id);
+      if(entry) entry.hours = val;
+      editingEntryId = null;
       await saveData();
       renderEntryTable();
     });
@@ -722,7 +839,7 @@ function renderTeamPanel(){
   } else {
     list.innerHTML = DATA.employees.map(e=>`
       <div class="list-item">
-        <span>${escapeHtml(e.name)} <span class="dept-badge">${escapeHtml(e.department)}</span></span>
+        <span>${escapeHtml(e.name)}${e.title?` <span style="color:var(--slate); font-weight:400;">— ${escapeHtml(e.title)}</span>`:''} <span class="dept-badge">${escapeHtml(e.department)}</span></span>
         <button class="btn danger" data-del-emp="${e.id}">Remove</button>
       </div>`).join('');
     list.querySelectorAll('[data-del-emp]').forEach(b=>{
@@ -799,9 +916,10 @@ function renderTeamPanel(){
 document.getElementById('employeeForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const name = document.getElementById('emp-name').value.trim();
+  const title = document.getElementById('emp-title').value.trim();
   const dept = document.getElementById('emp-dept').value;
   if(!name) return;
-  DATA.employees.push({id:uid(), name, department:dept});
+  DATA.employees.push({id:uid(), name, title, department:dept});
   await saveData();
   document.getElementById('employeeForm').reset();
   renderTeamPanel(); refreshEntryFormOptions();
@@ -949,8 +1067,12 @@ function renderReport(){
     byDept[e.department][key] = (byDept[e.department][key]||0)+e.hours;
   });
 
+  const pendingCount = list.filter(e=>(e.status||'approved')!=='approved').length;
   let grandTotal = 0;
-  let html = '<div style="overflow-x:auto;"><table><thead><tr><th>Department</th><th>Team member</th><th>Project</th><th>Activity</th><th>Hours</th></tr></thead><tbody>';
+  let html = pendingCount>0
+    ? `<p style="font-size:12.5px; color:#8A5A16; background:#F5E6C8; padding:8px 12px; border-radius:4px;">${pendingCount} ${pendingCount===1?'entry is':'entries are'} still pending ${MANAGER_NAME}'s approval — hours are included below regardless of status.</p>`
+    : '';
+  html += '<div style="overflow-x:auto;"><table><thead><tr><th>Department</th><th>Team member</th><th>Project</th><th>Activity</th><th>Hours</th></tr></thead><tbody>';
   Object.entries(byDept).forEach(([dept, rows])=>{
     let deptTotal = 0;
     const rowsHtml = Object.entries(rows).sort((a,b)=>a[0].localeCompare(b[0])).map(([key,hrs])=>{
